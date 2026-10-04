@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatDPT</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* Scroller styling (Firefox) */
+        #scroll-area {
+            scrollbar-width: thin;
+            scrollbar-color: #404040 #0a0a0a;
+        }
+
+        /* Scroller styling (Chrome, Edge, Safari) */
+        #scroll-area::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #scroll-area::-webkit-scrollbar-track {
+            background: #0a0a0a; /* neutral-950 */
+        }
+
+        #scroll-area::-webkit-scrollbar-thumb {
+            background: #404040; /* neutral-700 */
+            border-radius: 9999px;
+            border: 2px solid #0a0a0a;
+        }
+
+        #scroll-area::-webkit-scrollbar-thumb:hover {
+            background: #737373; /* neutral-500 */
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-900 text-white overflow-hidden h-dvh flex flex-col">
+    <!-- Scrollable messages area -->
+    <div class="relative flex-1 min-h-0">
+        <div class="h-full overflow-y-auto overflow-x-hidden bg-neutral-900" id="scroll-area">
+            <div class="container mx-auto max-w-3xl px-2 pt-4 pb-6" id="chat-container">
+                <!-- Messages goes here -->
+
+                <!-- user message -->
+
+
+                <!-- Assistant message -->
+                <!-- <div class="max-w-fit">
+                    what is the weather ?
+                </div> -->
+            </div>
+        </div>
+
+        <!-- Jump to latest -->
+        <button id="jump-latest"
+            class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 bg-neutral-700 hover:bg-neutral-600 text-sm px-3 py-1 rounded-full shadow-lg cursor-pointer">
+            ↓ Latest
+        </button>
+    </div>
+
+    <!-- Bottom textarea (sits below the scroll area, never overlaps it) -->
+    <div class="shrink-0 flex items-center justify-center bg-neutral-900 px-2">
+        <div class="bg-neutral-800 p-2 rounded-3xl w-full max-w-3xl mb-3">
+            <textarea class="w-full resize-none outline-0 p-3" rows="2" id="input"></textarea>
+            <div class="flex items-center justify-end">
+                <button id="ask"
+                    class="bg-white px-4 py-1 text-black rounded-full cursor-pointer hover:bg-gray-300">Ask</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-scroll logic -->
+    <script>
+        (() => {
+            const scrollArea = document.getElementById("scroll-area");
+            const chatContainer = document.getElementById("chat-container");
+            const jumpBtn = document.getElementById("jump-latest");
+            const askBtn = document.getElementById("ask");
+            const input = document.getElementById("input");
+
+            const THRESHOLD = 80; // px from bottom still counts as "at bottom"
+            let stickToBottom = true;
+
+            const isNearBottom = () =>
+                scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight <= THRESHOLD;
+
+            const scrollToBottom = () => {
+                scrollArea.scrollTop = scrollArea.scrollHeight;
+            };
+
+            // Track whether the user is following the conversation
+            scrollArea.addEventListener("scroll", () => {
+                stickToBottom = isNearBottom();
+                jumpBtn.classList.toggle("hidden", stickToBottom);
+            });
+
+            // Any height change (new message, streamed text, thinking text) -> follow
+            new ResizeObserver(() => {
+                if (stickToBottom) scrollToBottom();
+            }).observe(chatContainer);
+
+            // Safety net for DOM changes that don't change height right away
+            new MutationObserver(() => {
+                if (stickToBottom) requestAnimationFrame(scrollToBottom);
+            }).observe(chatContainer, { childList: true, subtree: true, characterData: true });
+
+            // Sending a message always snaps to the bottom
+            const forceFollow = () => {
+                stickToBottom = true;
+                jumpBtn.classList.add("hidden");
+                requestAnimationFrame(scrollToBottom);
+            };
+            askBtn.addEventListener("click", forceFollow);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) forceFollow();
+            });
+
+            jumpBtn.addEventListener("click", forceFollow);
+
+            // Keep pinned when the window/keyboard resizes
+            window.addEventListener("resize", () => {
+                if (stickToBottom) scrollToBottom();
+            });
+        })();
+    </script>
+
+    <script src="./script.js"></script>
+</body>
+
+</html>
