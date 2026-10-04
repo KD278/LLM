@@ -1,17 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { generate } from './chatbot.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
+const publicPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 
 app.use(cors());
 app.use(express.json());
-
-app.get('/', (req, res) => {
-    res.send('Welcome to ChatDPT!');
-});
+app.use(express.static(publicPath));
 
 app.post('/chat', async (req, res) => {
     const { message, threadId } = req.body ?? {};
@@ -35,20 +35,24 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500).json({ message: err.message || 'Server error' });
 });
 
-const server = app.listen(port, () => {
-    // console.log(`Server is running on port: ${port}`);
-});
+export default app;
 
-server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`Port ${port} is already in use. Stop the other process or change PORT.`);
-    } else {
-        console.error('Server error:', err);
-    }
-    process.exit(1);
-});
+if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+    const server = app.listen(port, () => {
+        // console.log(`Server is running on port: ${port}`);
+    });
 
-// Keep the server alive on stray async errors, but log them
-process.on('unhandledRejection', (reason) => {
-    console.error('Unhandled rejection:', reason);
-});
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`Port ${port} is already in use. Stop the other process or change PORT.`);
+        } else {
+            console.error('Server error:', err);
+        }
+        process.exit(1);
+    });
+
+    // Keep the server alive on stray async errors, but log them
+    process.on('unhandledRejection', (reason) => {
+        console.error('Unhandled rejection:', reason);
+    });
+}
